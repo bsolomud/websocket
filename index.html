@@ -1,0 +1,33 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+</head>
+<body>
+<div id="messages"></div>
+<input id="message-box">
+<button id="enter_button">send</button>
+<script>
+    var div_mes = document.getElementById("messages");
+    var send_button = document.getElementById("enter_button");
+    var input_box = document.getElementById("message-box");
+    function build_message(string) {
+        var p = document.createElement("p");
+        p.appendChild(document.createTextNode(string));
+        div_mes.appendChild(p);
+    }
+
+    var ws = new WebSocket("ws://localhost:8187");
+    ws.onopen = function() { ws.send("Hey! I'm here Nigga"); };
+    ws.onmessage = function(e) { build_message(e.data); };
+    ws.onclose = function() { "WebScked connection closed"; };
+
+
+    send_button.onclick = function() {
+        console.log(input_box.value);
+        ws.send(input_box.value);
+        input_box.data = '';
+    };
+
+</script>
+</body>
+</html>
