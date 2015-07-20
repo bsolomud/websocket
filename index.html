@@ -3,31 +3,34 @@
 <head>
 </head>
 <body>
-<div id="messages"></div>
+<input id="user-name">
 <input id="message-box">
-<button id="enter_button">send</button>
+<button id="enter-button">send</button>
+<div id="messages"></div>
 <script>
+    var user_input = document.getElementById("user-name");
     var div_mes = document.getElementById("messages");
-    var send_button = document.getElementById("enter_button");
+    var send_button = document.getElementById("enter-button");
     var input_box = document.getElementById("message-box");
-    function build_message(string) {
-        var p = document.createElement("p");
-        p.appendChild(document.createTextNode(string));
-        div_mes.appendChild(p);
+    function build_message(text) {
+        var messages_array = text.split("\n");
+        console.log(messages_array);
+        for (message in messages_array) {
+            var p = document.createElement("p");
+            p.appendChild(document.createTextNode(messages_array[message]));
+            p.appendChild(document.createElement("br"));
+            div_mes.appendChild(p);
+        };
     }
-
-    var ws = new WebSocket("ws://localhost:8187");
-    ws.onopen = function() { ws.send("Hey! I'm here Nigga"); };
-    ws.onmessage = function(e) { build_message(e.data); };
-    ws.onclose = function() { "WebScked connection closed"; };
-
-
     send_button.onclick = function() {
-        console.log(input_box.value);
-        ws.send(input_box.value);
+        ws.send(user_input.value + ": " + input_box.value);
         input_box.data = '';
     };
-
+    var ws = new WebSocket("ws://localhost:8187");
+    ws.onmessage = function(e) {
+        build_message(e.data);
+    };
+    ws.onclose = function() { "WebScked connection closed"; };
 </script>
 </body>
 </html>
