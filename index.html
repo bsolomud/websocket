@@ -3,34 +3,95 @@
 <head>
 </head>
 <body>
-<input id="user-name">
-<input id="message-box">
-<button id="enter-button">send</button>
-<div id="messages"></div>
+<div id="user-box">
+    <input id="message">
+</div>
+<div id="chat"></div>
 <script>
-    var user_input = document.getElementById("user-name");
-    var div_mes = document.getElementById("messages");
-    var send_button = document.getElementById("enter-button");
-    var input_box = document.getElementById("message-box");
-    function build_message(text) {
-        var messages_array = text.split("\n");
-        console.log(messages_array);
-        for (message in messages_array) {
-            var p = document.createElement("p");
-            p.appendChild(document.createTextNode(messages_array[message]));
-            p.appendChild(document.createElement("br"));
-            div_mes.appendChild(p);
-        };
-    }
-    send_button.onclick = function() {
-        ws.send(user_input.value + ": " + input_box.value);
-        input_box.data = '';
-    };
+    var userBoxDiv = document.getElementById("user-box");
+    var messageInput = document.getElementById("message");
+    var chatDiv = document.getElementById("chat");
+
+    var userName = prompt("Type your name", "satanus");
+
     var ws = new WebSocket("ws://localhost:8187");
-    ws.onmessage = function(e) {
-        build_message(e.data);
+
+    function sendUserName(userName) {
+        ws.send("user_name:" + userName);
+    }
+
+    function deconstruct(message) {
+        var key = message.slice(0, message.indexOf(":"));
+        var value = message.slice(message.indexOf(":") + 1);
+        return [key, value];
+    }
+
+    function buildSendButton(userName) {
+        var button = document.createElement("button");
+        button.innerHTML = "Send to " + userName;
+        button.setAttribute("id", userName);
+        userBoxDiv.appendChild(button);
+    }
+
+    function buildSendButtons(users) {
+        var users = users.split(", ");
+        for (index in users) {
+            buildSendButton(users[index]);
+        }
+    }
+
+    function constructRecord(userName, message) {
+        return userName + ": " + message;
+    }
+
+    function addRecord(userName, message) {
+        var record = constructRecord(userName, message);
+        var p = document.createElement("p");
+        p.appendChild("<pre>" + record + "</pre>");
+        chatDiv.appendChild(p);
+    }
+
+    ws.onopen = function() {
+        sendUserName(userName);
     };
-    ws.onclose = function() { "WebScked connection closed"; };
+
+    ws.onmessage = function(e) {
+        data = deconstruct(e.data);
+        var key = data[0];
+        var value = data[1];
+        console.log("key: " + key + "; value: " + value);
+        switch (key) {
+            case "users":
+                var users = value;
+                buildSendButtons(users);
+                break;
+            case "user_name":
+                var sendFrom = value;
+                break;
+            case "message":
+                var message = value;
+                addRecord(sendFrom, message);
+                break;
+        }
+
+        var sendButtons = document.getElementsByTagName("button");
+
+        console.log(sendButtons);
+
+        for (var i = 0; i < sendButtons.length; i++) {
+            console.log(i);
+            sendButtons[i].onclick = function(e) {
+                console.log(userName);
+                ws.send("user_name:" + userName);
+//                var send_to = e.toElement.id;
+//                ws.send("to:", send_to);
+//                var message = messageInput.value;
+//                ws.send("message:", message);
+            }
+        }
+    };
+
+    ws.onclose = function() { "WebSocket connection is closed"; };
 </script>
 </body>
 </html>
