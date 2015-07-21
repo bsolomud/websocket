@@ -4,94 +4,95 @@
 </head>
 <body>
 <div id="user-box">
+    <label for="message">Type your message</label>
     <input id="message">
 </div>
 <div id="chat"></div>
 <script>
+    // get elements
     var userBoxDiv = document.getElementById("user-box");
     var messageInput = document.getElementById("message");
     var chatDiv = document.getElementById("chat");
 
-    var userName = prompt("Type your name", "satanus");
+    var userName = prompt("Type your name", "name");
+    var users = [];
+    var message = { sender: userName, receiver: null, text: null};
 
     var ws = new WebSocket("ws://localhost:8187");
 
-    function sendUserName(userName) {
-        ws.send("user_name:" + userName);
-    }
-
-    function deconstruct(message) {
-        var key = message.slice(0, message.indexOf(":"));
-        var value = message.slice(message.indexOf(":") + 1);
-        return [key, value];
-    }
-
     function buildSendButton(userName) {
         var button = document.createElement("button");
+
         button.innerHTML = "Send to " + userName;
-        button.setAttribute("id", userName);
+        button.setAttribute("class", "send-button");
+        button.setAttribute("value", userName);
         userBoxDiv.appendChild(button);
     }
 
     function buildSendButtons(users) {
-        var users = users.split(", ");
-        for (index in users) {
-            buildSendButton(users[index]);
+        if (users.indexOf(userName) > -1) { // if user list contains current user name
+            users.splice(users.indexOf(userName), 1);
+        }
+
+        for (var i = 0; i < users.length; i++) {
+            buildSendButton(users[i]);
         }
     }
 
-    function constructRecord(userName, message) {
+    function buildRecord(userName, message) {
         return userName + ": " + message;
     }
 
     function addRecord(userName, message) {
-        var record = constructRecord(userName, message);
+        var record = buildRecord(userName, message);
         var p = document.createElement("p");
-        p.appendChild("<pre>" + record + "</pre>");
+        var pre = document.createElement("pre");
+
+        pre.innerHTML = record;
+        p.appendChild(pre);
         chatDiv.appendChild(p);
     }
 
+    function diff(a1, a2) {
+        return a1.filter(function(i) { return a2.indexOf(i) < 0; });
+    }
+
     ws.onopen = function() {
-        sendUserName(userName);
+        ws.send(JSON.stringify(message)); // send user name to the server
     };
 
     ws.onmessage = function(e) {
-        data = deconstruct(e.data);
-        var key = data[0];
-        var value = data[1];
-        console.log("key: " + key + "; value: " + value);
-        switch (key) {
-            case "users":
-                var users = value;
-                buildSendButtons(users);
-                break;
-            case "user_name":
-                var sendFrom = value;
-                break;
-            case "message":
-                var message = value;
-                addRecord(sendFrom, message);
-                break;
+        var incomingMessage = JSON.parse(e.data);
+
+        if (incomingMessage.hasOwnProperty('users')) {
+            console.log(users);
+            console.log(incomingMessage.users);
+
+            var newUsers = diff(incomingMessage.users, users);
+
+            console.log(newUsers);
+
+            if (newUsers) {
+                buildSendButtons(newUsers);
+            }
+
+            users = incomingMessage.users;
+        } else {
+            addRecord(incomingMessage.sender, incomingMessage.text);
         }
 
-        var sendButtons = document.getElementsByTagName("button");
-
-        console.log(sendButtons);
+        var sendButtons = document.getElementsByClassName("send-button");
 
         for (var i = 0; i < sendButtons.length; i++) {
-            console.log(i);
             sendButtons[i].onclick = function(e) {
-                console.log(userName);
-                ws.send("user_name:" + userName);
-//                var send_to = e.toElement.id;
-//                ws.send("to:", send_to);
-//                var message = messageInput.value;
-//                ws.send("message:", message);
+                message.receiver = e.toElement.value;
+                message.text = messageInput.value;
+                ws.send(JSON.stringify(message));
             }
         }
     };
 
-    ws.onclose = function() { "WebSocket connection is closed"; };
+    ws.onclose = function() { console.log("WebSocket connection is closed"); };
 </script>
 </body>
 </html>
